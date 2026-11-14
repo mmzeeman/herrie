@@ -43,16 +43,16 @@ dh_(DHType, OtherPub, MyPriv) ->
     crypto:compute_key(ecdh, OtherPub, MyPriv, DHType).
 
 -spec hmac(Hash :: herrie_sym_state:noise_hash(),
-           Key :: binary(), Data :: binary()) -> binary().
+           Key :: binary(), Data :: iodata()) -> binary().
 hmac(Hash, Key, Data) ->
     BLen = blocklen(Hash),
     Block1 = hmac_format_key(Hash, Key, 16#36, BLen),
-    Hash1 = hash(Hash, <<Block1/binary, Data/binary>>),
+    Hash1 = hash(Hash, [Block1, Data]),
     Block2 = hmac_format_key(Hash, Key, 16#5C, BLen),
-    hash(Hash, <<Block2/binary, Hash1/binary>>).
+    hash(Hash, [Block2, Hash1]).
 
 -spec hkdf(Hash :: herrie_sym_state:noise_hash(),
-           Key :: binary(), Data :: binary()) -> [binary()].
+           Key :: binary(), Data :: iodata()) -> [binary()].
 hkdf(Hash, Key, Data) ->
     TempKey = hmac(Hash, Key, Data),
     Output1 = hmac(Hash, TempKey, <<1:8>>),
@@ -94,7 +94,7 @@ nonce('AESGCM', N)     -> <<0:32, N:64/big-unsigned-integer>>.
 cipher('ChaChaPoly') -> chacha20_poly1305;
 cipher('AESGCM')     -> aes_256_gcm.
 
--spec hash(Hash :: herrie_sym_state:noise_hash(), Data :: binary()) -> binary().
+-spec hash(Hash :: herrie_sym_state:noise_hash(), Data :: iodata()) -> binary().
 hash(blake2s, Data) ->
     crypto:hash(blake2s, Data);
 hash(blake2b, Data) ->

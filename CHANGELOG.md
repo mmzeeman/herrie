@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0]
+### Added
+- herrie_crypto:hash/2 and herrie_crypto:hmac/3 now take iodata() as input and prevent copying of data.
+### Changed
+- Redacted sensitive data in connection process to prevent leaking of secrets.
+- Clear finilized handshake secrets from record to prevent leaking of secrets.
+
 ## [1.0.0]
 ### Added
 - herrie_encrypt_with_ad_iolist, which prevents extra copying of ciphertext and tags

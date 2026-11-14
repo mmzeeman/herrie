@@ -85,17 +85,20 @@ aesgcm_test() ->
 
 blake2b_test() ->
     Test = fun(#{ input := In, output := Out }) ->
-               ?assertMatch(Out, herrie_crypto:hash(blake2b, In))
+               ?assertMatch(Out, herrie_crypto:hash(blake2b, In)),
+               ?assertMatch(Out, herrie_crypto:hash(blake2b, binary_to_list(In)))
            end,
     lists:foreach(Test, test_utils:blake2b_data()).
 
-%% blake2s_test() ->
-%%     #{ input := In, output := Out } = test_utils:blake2s_data(),
-%%     ?assertMatch(Out, herrie_crypto:hash(blake2s, In)).
+blake2s_test() ->
+     #{ input := In, output := Out } = test_utils:blake2s_data(),
+     ?assertMatch(Out, herrie_crypto:hash(blake2s, In)),
+     ?assertMatch(Out, herrie_crypto:hash(blake2s, binary_to_list(In))).
 
 blake2b_hmac_test() ->
     Test = fun(#{ key := Key, data := Data, hmac := HMAC }) ->
-               ?assertMatch(HMAC, herrie_crypto:hmac(blake2b, Key, Data))
+               ?assertMatch(HMAC, herrie_crypto:hmac(blake2b, Key, Data)),
+               ?assertMatch(HMAC, herrie_crypto:hmac(blake2b, Key, binary_to_list(Data)))
            end,
     lists:foreach(Test, test_utils:blake2b_hmac_data()).
 
