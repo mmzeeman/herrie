@@ -93,3 +93,24 @@ noise_test(Oneway, [#{ payload := PL0, ciphertext := CT0 } | Msgs], CA, CB) ->
     if not Oneway -> noise_test(Oneway, Msgs, CB, CA1);
        Oneway     -> noise_test(Oneway, Msgs, CA1, CB)
     end.
+
+finalize_does_not_return_private_key_material_test() ->
+    Protocol = herrie_protocol:from_name(
+                 <<"Noise_N_25519_ChaChaPoly_BLAKE2b">>),
+    LocalStatic = herrie_keypair:new(dh25519, <<1:256>>, undefined),
+    Ephemeral = herrie_keypair:new(dh25519, <<2:256>>, undefined),
+    RemoteKey = herrie_keypair:new(dh25519, <<3:256>>, undefined),
+    RemoteStatic = herrie_keypair:new(
+                     dh25519, herrie_keypair:pubkey(RemoteKey)),
+    {ok, HS0} = herrie_hs_state:init(
+                  Protocol, initiator, <<>>,
+                  {LocalStatic, Ephemeral, RemoteStatic, undefined}),
+    {ok, HS1, _Message} = herrie_hs_state:write_message(HS0, <<>>),
+
+    {ok, Finalized} = herrie_hs_state:finalize(HS1),
+
+    ?assertEqual([final_state, hs_hash, rx, tx],
+                 lists:sort(maps:keys(Finalized))),
+    ?assertMatch({noise_hs, undefined, undefined, undefined, undefined,
+                  undefined, initiator, dh25519, []},
+                 maps:get(final_state, Finalized)).

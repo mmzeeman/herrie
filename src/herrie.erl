@@ -118,6 +118,7 @@ handshake(Options, Role, ComState) ->
 
 %% @doc Upgrades a gen_tcp, or equivalent, connected socket to a Noise socket,
 %% that is, performs the client-side noise handshake.
+%% The third element in the success tuple is the finalized handshake state.
 %%
 %% Note: The TCP socket has to be in mode `{active, true}' or `{active, once}',
 %% passive receive is not supported.
@@ -132,6 +133,7 @@ connect(TcpSock, Options) ->
 
 %% @doc Upgrades a gen_tcp, or equivalent, connected socket to a Noise socket,
 %% that is, performs the server-side noise handshake.
+%% The third element in the success tuple is the finalized handshake state.
 %%
 %% Note: The TCP socket has to be in mode `{active, true}' or `{active, once}',
 %% passive receive is not supported.

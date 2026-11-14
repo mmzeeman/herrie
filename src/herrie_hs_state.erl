@@ -29,7 +29,7 @@
 -type optional_key() :: undefined | keypair().
 -type initial_keys() :: {optional_key(), optional_key(), optional_key(), optional_key()}.
 
--record(noise_hs, { ss                :: herrie_sym_state:state()
+-record(noise_hs, { ss                :: herrie_sym_state:state() | undefined
                   , s                 :: keypair() | undefined
                   , e                 :: keypair() | undefined
                   , rs                :: keypair() | undefined
@@ -67,10 +67,15 @@ pre_mix(_Msg, _HS) ->
     {error, invalid_noise_setup}.
 
 -spec finalize(HS :: state()) -> {ok, noise_split_state()} | {error, term()}.
-finalize(HS = #noise_hs{ msgs = [], ss = SS, role = Role }) ->
+finalize(HS = #noise_hs{ msgs = [], ss = SS, role = Role }) when SS =/= undefined ->
     {C1, C2} = herrie_sym_state:split(SS),
     HSHash   = herrie_sym_state:h(SS),
-    Final    = #{ hs_hash => HSHash, final_state => HS },
+    FinalHS  = HS#noise_hs{ ss = undefined
+                          , s = undefined
+                          , e = undefined
+                          , rs = undefined
+                          , re = undefined },
+    Final    = #{ hs_hash => HSHash, final_state => FinalHS },
     case Role of
         initiator -> {ok, Final#{ tx => C1, rx => C2 }};
         responder -> {ok, Final#{ rx => C1, tx => C2 }}
