@@ -21,7 +21,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+         terminate/2, code_change/3, format_status/2]).
 
 -record(herrie, { pid }).
 
@@ -122,6 +122,11 @@ terminate(_Reason, #state{ tcp_sock = TcpSock, owner_ref = ORef }) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+format_status(_Opt, [_PDict, State = #state{}]) ->
+    FormattedState = State#state{ rx = redacted, tx = redacted,
+                                  msgbuf = redacted },
+    [{data, [{"State", FormattedState}]}].
 
 
 %% -- Local functions --------------------------------------------------------
