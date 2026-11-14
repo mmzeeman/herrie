@@ -1,6 +1,6 @@
-{application, enoise,
+{application, herrie,
  [{description, "An Erlang implementation of the Noise protocol"},
-  {vsn, "1.2.0"},
+  {vsn, "1.0.0"},
   {registered, []},
   {applications,
    [kernel,
@@ -9,7 +9,7 @@
    ]},
   {env,[]},
   {modules, []},
-  {maintainers, ["Hans Svensson"]},
+  {maintainers, ["MM Zeeman <<mmzeeman@xs4all.nl>"]},
   {licenses, ["ISC"]},
-  {links, [{"Github", "https://github.com/aeternity/enoise"}]}
+  {links, [{"Github", "https://github.com/mmzeeman/herrie"}]}
  ]}.

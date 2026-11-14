@@ -2,7 +2,7 @@
 %%% @copyright (C) 2018, Aeternity Anstalt
 %%%-------------------------------------------------------------------
 
--module(enoise_utils).
+-module(herrie_utils).
 
 -compile([export_all, nowarn_export_all]).
 
@@ -25,7 +25,7 @@ echo_srv(Port, Protocol, SKP, SrvOpts) ->
 
     AcceptRes =
         try
-            enoise:accept(TcpSock, Opts)
+            herrie:accept(TcpSock, Opts)
         catch _:R:S -> gen_tcp:close(TcpSock), {error, {R, S}} end,
 
     gen_tcp:close(LSock),
@@ -46,7 +46,7 @@ echo_srv_loop(EConn, SrvOpts) ->
                 end;
             active  ->
                 fun() ->
-                    {ok, Msg} = enoise:recv(EConn, 0, 100),
+                    {ok, Msg} = herrie:recv(EConn, 0, 100),
                     Msg
                 end
         end,
@@ -56,14 +56,14 @@ echo_srv_loop(EConn, SrvOpts) ->
         try
             [ begin
                 Msg = Recv(),
-                ok = enoise:send(EConn, Msg)
+                ok = herrie:send(EConn, Msg)
             end || _ <- lists:seq(1, Echos) ],
             ok
         catch _:R -> {error, R} end,
 
     srv_reply(Res, SrvOpts),
 
-    enoise:close(EConn),
+    herrie:close(EConn),
 
     Res.
 
@@ -74,8 +74,8 @@ srv_reply(Reply, SrvOpts) ->
     end.
 
 need_rs(Role, Conf) when is_binary(Conf) ->
-    need_rs(Role, enoise_protocol:from_name(Conf));
+    need_rs(Role, herrie_protocol:from_name(Conf));
 need_rs(Role, Protocol) ->
-    PreMsgs = enoise_protocol:pre_msgs(Role, Protocol),
+    PreMsgs = herrie_protocol:pre_msgs(Role, Protocol),
     lists:member({in, [s]}, PreMsgs).
 

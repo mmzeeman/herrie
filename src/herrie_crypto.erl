@@ -6,9 +6,9 @@
 %%% @end
 %%% ------------------------------------------------------------------
 
--module(enoise_crypto).
+-module(herrie_crypto).
 
--include("enoise.hrl").
+-include("herrie.hrl").
 
 -export([ decrypt/5
         , dh/3
@@ -25,14 +25,14 @@
 
 -define(MAC_LEN, 16).
 
--type keypair() :: enoise_keypair:keypair().
+-type keypair() :: herrie_keypair:keypair().
 
 %% @doc Perform a Diffie-Hellman calculation with the secret key from `Key1'
 %% and the public key from `Key2' with algorithm `Algo'.
--spec dh(Algo :: enoise_hs_state:noise_dh(),
+-spec dh(Algo :: herrie_hs_state:noise_dh(),
          Key1:: keypair(), Key2 :: keypair()) -> binary().
 dh(Type, Key1, Key2) when Type == dh25519; Type == dh448 ->
-    dh_(ecdh_type(Type), enoise_keypair:pubkey(Key2), enoise_keypair:seckey(Key1));
+    dh_(ecdh_type(Type), herrie_keypair:pubkey(Key2), herrie_keypair:seckey(Key1));
 dh(Type, _Key1, _Key2) ->
     error({unsupported_diffie_hellman, Type}).
 
@@ -42,7 +42,7 @@ ecdh_type(dh448)   -> x448.
 dh_(DHType, OtherPub, MyPriv) ->
     crypto:compute_key(ecdh, OtherPub, MyPriv, DHType).
 
--spec hmac(Hash :: enoise_sym_state:noise_hash(),
+-spec hmac(Hash :: herrie_sym_state:noise_hash(),
            Key :: binary(), Data :: binary()) -> binary().
 hmac(Hash, Key, Data) ->
     BLen = blocklen(Hash),
@@ -51,7 +51,7 @@ hmac(Hash, Key, Data) ->
     Block2 = hmac_format_key(Hash, Key, 16#5C, BLen),
     hash(Hash, <<Block2/binary, Hash1/binary>>).
 
--spec hkdf(Hash :: enoise_sym_state:noise_hash(),
+-spec hkdf(Hash :: herrie_sym_state:noise_hash(),
            Key :: binary(), Data :: binary()) -> [binary()].
 hkdf(Hash, Key, Data) ->
     TempKey = hmac(Hash, Key, Data),
@@ -60,24 +60,24 @@ hkdf(Hash, Key, Data) ->
     Output3 = hmac(Hash, TempKey, <<Output2/binary, 3:8>>),
     [Output1, Output2, Output3].
 
--spec rekey(Cipher :: enoise_cipher_state:noise_cipher(), Key :: binary()) -> binary().
+-spec rekey(Cipher :: herrie_cipher_state:noise_cipher(), Key :: binary()) -> binary().
 rekey(Cipher, K0) ->
     <<K:32/binary, _/binary>> = encrypt(Cipher, K0, ?MAX_NONCE, <<>>, <<0:(32*8)>>),
     K.
 
--spec encrypt(Cipher :: enoise_cipher_state:noise_cipher(), Key :: binary(),
+-spec encrypt(Cipher :: herrie_cipher_state:noise_cipher(), Key :: binary(),
               Nonce :: non_neg_integer(), Ad :: binary(), PlainText :: binary()) -> binary().
 encrypt(Cipher, K, N, Ad, PlainText) ->
     {CText, CTag} = crypto:crypto_one_time_aead(cipher(Cipher), K, nonce(Cipher, N), PlainText, Ad, true),
     <<CText/binary, CTag/binary>>.
 
--spec encrypt_iolist(Cipher :: enoise_cipher_state:noise_cipher(), Key :: binary(),
+-spec encrypt_iolist(Cipher :: herrie_cipher_state:noise_cipher(), Key :: binary(),
                      Nonce :: non_neg_integer(), Ad :: binary(), PlainText :: iodata()) -> iolist().
 encrypt_iolist(Cipher, K, N, Ad, PlainText) ->
     tuple_to_list(
       crypto:crypto_one_time_aead(cipher(Cipher), K, nonce(Cipher, N), PlainText, Ad, true)).
 
--spec decrypt(Cipher ::enoise_cipher_state:noise_cipher(), Key :: binary(),
+-spec decrypt(Cipher ::herrie_cipher_state:noise_cipher(), Key :: binary(),
               Nonce :: non_neg_integer(), AD :: binary(),
               CipherText :: binary()) -> binary() | {error, term()}.
 decrypt(Cipher, K, N, Ad, CipherText0) ->
@@ -94,7 +94,7 @@ nonce('AESGCM', N)     -> <<0:32, N:64/big-unsigned-integer>>.
 cipher('ChaChaPoly') -> chacha20_poly1305;
 cipher('AESGCM')     -> aes_256_gcm.
 
--spec hash(Hash :: enoise_sym_state:noise_hash(), Data :: binary()) -> binary().
+-spec hash(Hash :: herrie_sym_state:noise_hash(), Data :: binary()) -> binary().
 hash(blake2s, Data) ->
     crypto:hash(blake2s, Data);
 hash(blake2b, Data) ->
@@ -117,19 +117,19 @@ pad(Data, MinSize, PadByte) ->
             <<Data/binary, PadData/binary>>
     end.
 
--spec hashlen(Hash :: enoise_sym_state:noise_hash()) -> non_neg_integer().
+-spec hashlen(Hash :: herrie_sym_state:noise_hash()) -> non_neg_integer().
 hashlen(sha256)  -> 32;
 hashlen(sha512)  -> 64;
 hashlen(blake2s) -> 32;
 hashlen(blake2b) -> 64.
 
--spec blocklen(Hash :: enoise_sym_state:noise_hash()) -> non_neg_integer().
+-spec blocklen(Hash :: herrie_sym_state:noise_hash()) -> non_neg_integer().
 blocklen(sha256)  -> 64;
 blocklen(sha512)  -> 128;
 blocklen(blake2s) -> 64;
 blocklen(blake2b) -> 128.
 
--spec dhlen(DH :: enoise_hs_state:noise_dh()) -> non_neg_integer().
+-spec dhlen(DH :: herrie_hs_state:noise_dh()) -> non_neg_integer().
 dhlen(dh25519) -> 32;
 dhlen(dh448)   -> 56.
 

@@ -6,7 +6,7 @@
 %%% @end
 %%% ------------------------------------------------------------------
 
--module(enoise_cipher_state).
+-module(herrie_cipher_state).
 
 -export([ cipher/1
         , decrypt_with_ad/3
@@ -20,7 +20,7 @@
         , set_nonce/2
         ]).
 
--include("enoise.hrl").
+-include("herrie.hrl").
 
 -type noise_cipher() :: 'ChaChaPoly' | 'AESGCM'.
 -type nonce()        :: non_neg_integer().
@@ -55,7 +55,7 @@ set_nonce(CState = #noise_cs{}, Nonce) ->
 encrypt_with_ad(CState = #noise_cs{ k = empty }, _AD, PlainText) ->
     {ok, CState, PlainText};
 encrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, PlainText) ->
-    CipherText = enoise_crypto:encrypt(Cipher, K, N, AD, PlainText),
+    CipherText = herrie_crypto:encrypt(Cipher, K, N, AD, PlainText),
     {ok, CState#noise_cs{ n = N+1 }, CipherText}.
 
 -spec encrypt_with_ad_iolist(CState :: state(), AD :: binary(), PlainText :: iodata()) ->
@@ -63,7 +63,7 @@ encrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, PlainTe
 encrypt_with_ad_iolist(CState = #noise_cs{ k = empty }, _AD, PlainText) ->
     {ok, CState, PlainText};
 encrypt_with_ad_iolist(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, PlainText) ->
-    CipherText = enoise_crypto:encrypt_iolist(Cipher, K, N, AD, PlainText),
+    CipherText = herrie_crypto:encrypt_iolist(Cipher, K, N, AD, PlainText),
     {ok, CState#noise_cs{ n = N+1 }, CipherText}.
 
 
@@ -72,7 +72,7 @@ encrypt_with_ad_iolist(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, 
 decrypt_with_ad(CState = #noise_cs{ k = empty }, _AD, CipherText) ->
     {ok, CState, CipherText};
 decrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, CipherText) ->
-    case enoise_crypto:decrypt(Cipher, K, N, AD, CipherText) of
+    case herrie_crypto:decrypt(Cipher, K, N, AD, CipherText) of
         PlainText when is_binary(PlainText) ->
             {ok, CState#noise_cs{ n = N+1 }, PlainText};
         Err = {error, _} ->
@@ -83,7 +83,7 @@ decrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, CipherT
 rekey(CState = #noise_cs{ k = empty }) ->
     CState;
 rekey(CState = #noise_cs{ k = K, cipher = Cipher }) ->
-    CState#noise_cs{ k = enoise_crypto:rekey(Cipher, K) }.
+    CState#noise_cs{ k = herrie_crypto:rekey(Cipher, K) }.
 
 -spec cipher(CState :: state()) -> noise_cipher().
 cipher(#noise_cs{ cipher = Cipher }) ->

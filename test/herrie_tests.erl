@@ -2,7 +2,7 @@
 %%% @copyright (C) 2018, Aeternity Anstalt
 %%%-------------------------------------------------------------------
 
--module(enoise_tests).
+-module(herrie_tests).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -18,7 +18,7 @@ noise_interactive_test_() ->
     }.
 
 noise_interactive(V = #{ protocol_name := Name }) ->
-    Protocol = enoise_protocol:from_name(Name),
+    Protocol = herrie_protocol:from_name(Name),
 
     FixK = fun(undefined) -> undefined;
               (Bin) -> test_utils:hex_str_to_bin("0x" ++ binary_to_list(Bin)) end,
@@ -39,12 +39,12 @@ noise_interactive(V = #{ protocol_name := Name }) ->
     ok.
 
 noise_interactive(_Name, Protocol, Init, Resp, Messages, HSHash) ->
-    DH = enoise_protocol:dh(Protocol),
-    SecK = fun(undefined) -> undefined; (Sec) -> enoise_keypair:new(DH, Sec, undefined) end,
+    DH = herrie_protocol:dh(Protocol),
+    SecK = fun(undefined) -> undefined; (Sec) -> herrie_keypair:new(DH, Sec, undefined) end,
 
     HSInit = fun(#{ e := E, s := S, rs := RS, prologue := PL }, R) ->
                 Opts = [{noise, Protocol}, {s, SecK(S)}, {e, SecK(E)}, {rs, RS}, {prologue, PL}],
-                enoise:handshake(Opts, R)
+                herrie:handshake(Opts, R)
              end,
     {ok, InitHS} = HSInit(Init, initiator),
     {ok, RespHS} = HSInit(Resp, responder),
@@ -54,16 +54,16 @@ noise_interactive(_Name, Protocol, Init, Resp, Messages, HSHash) ->
 noise_interactive([#{ payload := PL0, ciphertext := CT0 } | Msgs], SendHS, RecvHS, HSHash) ->
     PL = test_utils:hex_str_to_bin("0x" ++ binary_to_list(PL0)),
     CT = test_utils:hex_str_to_bin("0x" ++ binary_to_list(CT0)),
-    case enoise_hs_state:next_message(SendHS) of
+    case herrie_hs_state:next_message(SendHS) of
         out ->
-            {ok, send, Message, SendHS1} = enoise:step_handshake(SendHS, {send, PL}),
+            {ok, send, Message, SendHS1} = herrie:step_handshake(SendHS, {send, PL}),
             ?assertEqual(CT, Message),
-            {ok, rcvd, PL1, RecvHS1} = enoise:step_handshake(RecvHS, {rcvd, Message}),
+            {ok, rcvd, PL1, RecvHS1} = herrie:step_handshake(RecvHS, {rcvd, Message}),
             ?assertEqual(PL, PL1),
             noise_interactive(Msgs, RecvHS1, SendHS1, HSHash);
         done ->
-            {ok, done, #{ rx := RX1, tx := TX1, hs_hash := HSHash1 }} = enoise:step_handshake(SendHS, done),
-            {ok, done, #{ rx := RX2, tx := TX2, hs_hash := HSHash2 }} = enoise:step_handshake(RecvHS, done),
+            {ok, done, #{ rx := RX1, tx := TX1, hs_hash := HSHash1 }} = herrie:step_handshake(SendHS, done),
+            {ok, done, #{ rx := RX2, tx := TX2, hs_hash := HSHash2 }} = herrie:step_handshake(RecvHS, done),
             ?assertEqual(RX1, TX2), ?assertEqual(RX2, TX1),
             ?assertEqual(HSHash, HSHash1), ?assertEqual(HSHash, HSHash2)
     end.
@@ -89,19 +89,19 @@ noise_monitor_test_() ->
 
 setup_dh25519() ->
     %% Generate a static key-pair for Client and Server
-    SrvKeyPair = enoise_keypair:new(dh25519),
-    CliKeyPair = enoise_keypair:new(dh25519),
+    SrvKeyPair = herrie_keypair:new(dh25519),
+    CliKeyPair = herrie_keypair:new(dh25519),
 
-    #{ hs_pattern := Ps, hash := Hs, cipher := Cs } = enoise_protocol:supported(),
-    Configurations = [ enoise_protocol:to_name(P, dh25519, C, H)
+    #{ hs_pattern := Ps, hash := Hs, cipher := Cs } = herrie_protocol:supported(),
+    Configurations = [ herrie_protocol:to_name(P, dh25519, C, H)
                        || P <- Ps, C <- Cs, H <- Hs ],
-    %% Configurations = [ enoise_protocol:to_name(xk, dh25519, 'ChaChaPoly', blake2b) ],
+    %% Configurations = [ herrie_protocol:to_name(xk, dh25519, 'ChaChaPoly', blake2b) ],
     {Configurations, SrvKeyPair, CliKeyPair}.
 
 noise_test(Conf, SKP, CKP) ->
     #{econn := EConn, echo_srv := EchoSrv, res := Res} = noise_test_run(Conf, SKP, CKP),
-    enoise:close(EConn),
-    enoise_utils:echo_srv_stop(EchoSrv),
+    herrie:close(EConn),
+    herrie_utils:echo_srv_stop(EchoSrv),
     ?assertMatch(ok, Res).
 
 noise_test_run(Conf, SKP, CKP) ->
@@ -145,18 +145,18 @@ proxy_exec(P, F) when is_function(F, 0) ->
     end.
 
 noise_test_run_(Conf, SKP, CKP) ->
-    Protocol = enoise_protocol:from_name(Conf),
+    Protocol = herrie_protocol:from_name(Conf),
     Port     = 4556,
 
-    SrvOpts = [{echos, 2}, {cpub, enoise_keypair:pubkey(CKP)}],
-    EchoSrv = enoise_utils:echo_srv_start(Port, Protocol, SKP, SrvOpts),
+    SrvOpts = [{echos, 2}, {cpub, herrie_keypair:pubkey(CKP)}],
+    EchoSrv = herrie_utils:echo_srv_start(Port, Protocol, SKP, SrvOpts),
 
     {ok, TcpSock} = gen_tcp:connect("localhost", Port, [{active, once}, binary, {reuseaddr, true}], 100),
 
     Opts = [{noise, Protocol}, {s, CKP}]
-             ++ [{rs, enoise_keypair:pubkey(SKP)} || enoise_utils:need_rs(initiator, Conf) ],
+             ++ [{rs, herrie_keypair:pubkey(SKP)} || herrie_utils:need_rs(initiator, Conf) ],
 
-    {ok, EConn, _} = enoise:connect(TcpSock, Opts),
+    {ok, EConn, _} = herrie:connect(TcpSock, Opts),
 
     Resources = #{ econn => EConn, tcp_sock => TcpSock, echo_srv => EchoSrv },
 
@@ -168,15 +168,15 @@ noise_test_run_(Conf, SKP, CKP) ->
     end.
 
 echo_send(Resources = #{econn := EConn}, Msg) ->
-    enoise:set_active(EConn, once),
-    ok = enoise:send(EConn, Msg),
+    herrie:set_active(EConn, once),
+    ok = herrie:send(EConn, Msg),
     receive
         {noise, _, Msg} -> {ok, Resources}
         after 100 -> {{error, timeout}, Resources}
     end.
 
 noise_monitor_test(Conf, SKP, CKP) ->
-    #{ econn := {enoise, EConnPid}
+    #{ econn := {herrie, EConnPid}
      , proxy := Proxy
      , tcp_sock := _TcpSock
      , res := Res } = noise_test_run(Conf, SKP, CKP),
@@ -197,7 +197,7 @@ assert_not_alive(N, EConnPid) ->
 
 %% Talks to local echo-server (noise-c)
 %% client_test() ->
-%%     TestProtocol = enoise_protocol:from_name("Noise_XK_25519_ChaChaPoly_BLAKE2b"),
+%%     TestProtocol = herrie_protocol:from_name("Noise_XK_25519_ChaChaPoly_BLAKE2b"),
 %%     ClientPrivKey = <<64,168,119,119,151,194,94,141,86,245,144,220,78,53,243,231,168,216,66,199,49,148,202,117,98,40,61,109,170,37,133,122>>,
 %%     ClientPubKey  = <<115,39,86,77,44,85,192,176,202,11,4,6,194,144,127,123, 34,67,62,180,190,232,251,5,216,168,192,190,134,65,13,64>>,
 %%     ServerPubKey  = <<112,91,141,253,183,66,217,102,211,40,13,249,238,51,77,114,163,159,32,1,162,219,76,106,89,164,34,71,149,2,103,59>>,
@@ -206,29 +206,29 @@ assert_not_alive(N, EConnPid) ->
 %%     gen_tcp:send(TcpSock, <<0,8,0,0,3>>), %% "Noise_XK_25519_ChaChaPoly_Blake2b"
 
 %%     Opts = [ {noise, TestProtocol}
-%%            , {s, enoise_keypair:new(dh25519, ClientPrivKey, ClientPubKey)}
-%%            , {rs, enoise_keypair:new(dh25519, ServerPubKey)}
+%%            , {s, herrie_keypair:new(dh25519, ClientPrivKey, ClientPubKey)}
+%%            , {rs, herrie_keypair:new(dh25519, ServerPubKey)}
 %%            , {prologue, <<0,8,0,0,3>>}],
 
-%%     {ok, EConn} = enoise:connect(TcpSock, Opts),
-%%     ok = enoise:send(EConn, <<"ok\n">>),
+%%     {ok, EConn} = herrie:connect(TcpSock, Opts),
+%%     ok = herrie:send(EConn, <<"ok\n">>),
 %%     receive
 %%         {noise, EConn, <<"ok\n">>} -> ok
 %%     after 1000 -> error(timeout) end,
-%%     %% {ok, <<"ok\n">>} = enoise:recv(EConn, 3, 1000),
-%%     enoise:close(EConn).
+%%     %% {ok, <<"ok\n">>} = herrie:recv(EConn, 3, 1000),
+%%     herrie:close(EConn).
 
 
 %% Expects a call-in from a local echo-client (noise-c)
 %% server_test_() ->
 %%     {timeout, 20, fun() ->
-%%     TestProtocol = enoise_protocol:from_name("Noise_XK_25519_ChaChaPoly_Blake2b"),
+%%     TestProtocol = herrie_protocol:from_name("Noise_XK_25519_ChaChaPoly_Blake2b"),
 
 %%     ServerPrivKey = <<200,81,196,192,228,196,182,200,181,83,169,255,242,54,99,113,8,49,129,92,225,220,99,50,93,96,253,250,116,196,137,103>>,
 %%     ServerPubKey  = <<112,91,141,253,183,66,217,102,211,40,13,249,238,51,77,114,163,159,32,1,162,219,76,106,89,164,34,71,149,2,103,59>>,
 
 %%     Opts = [ {noise, TestProtocol}
-%%            , {s, enoise_keypair:new(dh25519, ServerPrivKey, ServerPubKey)}
+%%            , {s, herrie_keypair:new(dh25519, ServerPrivKey, ServerPubKey)}
 %%            , {prologue, <<0,8,0,0,3>>}],
 
 %%     {ok, LSock} = gen_tcp:listen(7891, [{reuseaddr, true}, binary]),
@@ -238,12 +238,12 @@ assert_not_alive(N, EConnPid) ->
 %%     receive {tcp, TcpSock, <<0,8,0,0,3>>} -> ok
 %%     after 1000 -> error(timeout) end,
 
-%%     {ok, EConn} = enoise:accept(TcpSock, Opts),
+%%     {ok, EConn} = herrie:accept(TcpSock, Opts),
 
-%%     {EConn1, Msg} = enoise:recv(EConn),
-%%     EConn2 = enoise:send(EConn1, Msg),
+%%     {EConn1, Msg} = herrie:recv(EConn),
+%%     EConn2 = herrie:send(EConn1, Msg),
 
-%%     enoise:close(EConn2)
+%%     herrie:close(EConn2)
 %%     end}.
 
 

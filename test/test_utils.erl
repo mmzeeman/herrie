@@ -149,19 +149,19 @@ noise_test_filter(Tests0) ->
     Tests1.
 
 supported(Name) ->
-    try enoise_protocol:from_name(Name), true
+    try herrie_protocol:from_name(Name), true
     catch _:_ -> false end.
 
 analyse_unsupported(Us) ->
     UParts = lists:map(fun dismount_protocol/1, Us),
-    UPats  = lists:usort([ Pat  || {Pat, _, _, _}  <- UParts, not enoise_protocol:supported_pattern(Pat) ]),
+    UPats  = lists:usort([ Pat  || {Pat, _, _, _}  <- UParts, not herrie_protocol:supported_pattern(Pat) ]),
     ?debugFmt("\nUnsupported patterns: ~120p", [UPats]).
 
 dismount_protocol(P) ->
     case string:lexemes(binary_to_list(P), "_") of
         ["Noise", PatStr, DhStr, CiphStr, HashStr] ->
-            {enoise_protocol:from_name_pattern(PatStr),
-             enoise_protocol:from_name_dh(DhStr),
-             enoise_protocol:from_name_cipher(CiphStr),
-             enoise_protocol:from_name_hash(HashStr)}
+            {herrie_protocol:from_name_pattern(PatStr),
+             herrie_protocol:from_name_dh(DhStr),
+             herrie_protocol:from_name_cipher(CiphStr),
+             herrie_protocol:from_name_hash(HashStr)}
     end.

@@ -7,12 +7,12 @@
 %%% The module implements Noise handshake in `handshake/3'.
 %%%
 %%% For convenience there is also an API to use Noise over TCP (i.e. `gen_tcp')
-%%% and after "upgrading" a `gen_tcp'-socket into a `enoise'-socket it has a
+%%% and after "upgrading" a `gen_tcp'-socket into a `herrie'-socket it has a
 %%% similar API as `gen_tcp'.
 %%%
 %%% @end ------------------------------------------------------------------
 
--module(enoise).
+-module(herrie).
 
 %% Main function with generic Noise handshake
 -export([handshake/2, handshake/3, step_handshake/2]).
@@ -25,10 +25,10 @@
         , send/2
         , set_active/2 ]).
 
--record(enoise, { pid }).
+-record(herrie, { pid }).
 
 -type noise_key() :: binary().
--type noise_keypair() :: enoise_keypair:keypair().
+-type noise_keypair() :: herrie_keypair:keypair().
 
 -type noise_options() :: [noise_option()].
 %% A list of Noise options is a proplist, it *must* contain a value `noise'
@@ -45,7 +45,7 @@
                       | {prologue, binary()} %% Optional
                       | {timeout, integer() | infinity}. %% Optional
 
--type noise_protocol_option() :: enoise_protocol:protocol() | string() |
+-type noise_protocol_option() :: herrie_protocol:protocol() | string() |
 binary().
 %% Either an instantiated Noise protocol configuration or the name of a Noise
 %% configuration (either as a string or a binary string).
@@ -66,12 +66,12 @@ binary().
 %% Noise communication state - used to parameterize a handshake. Consists of a
 %% send function, one receive function, and an internal state.
 
--type noise_split_state() :: enoise_hs_state:noise_split_state().
+-type noise_split_state() :: herrie_hs_state:noise_split_state().
 %% Return value from the final `split' operation. Provides a CipherState for
 %% receiving and a CipherState transmission. Also includes the final handshake
 %% hash for channel binding.
 
--opaque noise_socket() :: #enoise{}.
+-opaque noise_socket() :: #herrie{}.
 %% An abstract Noise socket - holds a reference to a socket that has completed
 %% a Noise handshake.
 
@@ -84,18 +84,18 @@ binary().
 %% @doc Start an interactive handshake
 %% @end
 -spec handshake(Options :: noise_options(),
-                Role :: enoise_hs_state:noise_role()) ->
-        {ok, enoise_hs_state:state()} | {error, term()}.
+                Role :: herrie_hs_state:noise_role()) ->
+        {ok, herrie_hs_state:state()} | {error, term()}.
 handshake(Options, Role) ->
     create_hstate(Options, Role).
 
 %% @doc Do a step (either `{send, Payload}', `{rcvd, EncryptedData}',
 %% or `done')
 %% @end
--spec step_handshake(HState :: enoise_hs_state:state(),
+-spec step_handshake(HState :: herrie_hs_state:state(),
                      Data :: {rcvd, binary()} | {send, binary()}) ->
-          {ok, send, binary(), enoise_hs_state:state()}
-        | {ok, rcvd, binary(), enoise_hs_state:state()}
+          {ok, send, binary(), herrie_hs_state:state()}
+        | {ok, rcvd, binary(), herrie_hs_state:state()}
         | {ok, done, noise_split_state()}
         | {error, term()}.
 step_handshake(HState, Data) ->
@@ -104,7 +104,7 @@ step_handshake(HState, Data) ->
 %% @doc Perform a Noise handshake
 %% @end
 -spec handshake(Options :: noise_options(),
-                Role :: enoise_hs_state:noise_role(),
+                Role :: herrie_hs_state:noise_role(),
                 ComState :: noise_com_state()) ->
         {ok, noise_split_state(), noise_com_state()} | {error, term()}.
 handshake(Options, Role, ComState) ->
@@ -126,7 +126,7 @@ handshake(Options, Role, ComState) ->
 %% @end
 -spec connect(TcpSock :: gen_tcp:socket(),
               Options :: noise_options()) ->
-                    {ok, noise_socket(), enoise_hs_state:state()} | {error, term()}.
+                    {ok, noise_socket(), herrie_hs_state:state()} | {error, term()}.
 connect(TcpSock, Options) ->
     tcp_handshake(TcpSock, initiator, Options).
 
@@ -140,21 +140,21 @@ connect(TcpSock, Options) ->
 %% @end
 -spec accept(TcpSock :: gen_tcp:socket(),
              Options :: noise_options()) ->
-                    {ok, noise_socket(), enoise_hs_state:state()} | {error, term()}.
+                    {ok, noise_socket(), herrie_hs_state:state()} | {error, term()}.
 accept(TcpSock, Options) ->
     tcp_handshake(TcpSock, responder, Options).
 
 %% @doc Writes `Data' to `Socket'
 %% @end
 -spec send(Socket :: noise_socket(), Data :: binary()) -> ok | {error, term()}.
-send(#enoise{ pid = Pid }, Data) ->
-    enoise_connection:send(Pid, Data).
+send(#herrie{ pid = Pid }, Data) ->
+    herrie_connection:send(Pid, Data).
 
 %% @doc Closes a Noise connection.
 %% @end
 -spec close(NoiseSock :: noise_socket()) -> ok | {error, term()}.
-close(#enoise{ pid = Pid }) ->
-    enoise_connection:close(Pid).
+close(#herrie{ pid = Pid }) ->
+    herrie_connection:close(Pid).
 
 %% @doc Assigns a new controlling process to the Noise socket. A controlling
 %% process is the owner of an Noise socket, and receives all messages from the
@@ -162,26 +162,26 @@ close(#enoise{ pid = Pid }) ->
 %% @end
 -spec controlling_process(Socket :: noise_socket(), Pid :: pid()) ->
         ok | {error, term()}.
-controlling_process(#enoise{ pid = Pid }, NewPid) ->
-    enoise_connection:controlling_process(Pid, NewPid).
+controlling_process(#herrie{ pid = Pid }, NewPid) ->
+    herrie_connection:controlling_process(Pid, NewPid).
 
 %% @doc Set the active option `true | once'. Note that `N' and `false' are
 %% not valid options for a Noise socket.
 %% @end
 -spec set_active(Socket :: noise_socket(), Mode :: true | once) ->
             ok | {error, term()}.
-set_active(#enoise{ pid = Pid }, ActiveMode) ->
-    enoise_connection:set_active(Pid, ActiveMode).
+set_active(#herrie{ pid = Pid }, ActiveMode) ->
+    herrie_connection:set_active(Pid, ActiveMode).
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
 do_handshake(HState, ComState, Timeout) ->
-    case enoise_hs_state:next_message(HState) of
+    case herrie_hs_state:next_message(HState) of
         in ->
             case hs_recv_msg(ComState, Timeout) of
                 {ok, Data, ComState1} ->
-                    case enoise_hs_state:read_message(HState, Data) of
+                    case herrie_hs_state:read_message(HState, Data) of
                         {ok, HState1, _Msg} ->
                             do_handshake(HState1, ComState1, Timeout);
                         Err = {error, _} ->
@@ -191,7 +191,7 @@ do_handshake(HState, ComState, Timeout) ->
                     Err
             end;
         out ->
-            {ok, HState1, Msg} = enoise_hs_state:write_message(HState, <<>>),
+            {ok, HState1, Msg} = herrie_hs_state:write_message(HState, <<>>),
             case hs_send_msg(ComState, Msg) of
                 {ok, ComState1} ->
                     do_handshake(HState1, ComState1, Timeout);
@@ -199,7 +199,7 @@ do_handshake(HState, ComState, Timeout) ->
                     Err
             end;
         done ->
-            {ok, Res} = enoise_hs_state:finalize(HState),
+            {ok, Res} = herrie_hs_state:finalize(HState),
             {ok, Res, ComState}
     end.
 
@@ -216,19 +216,19 @@ hs_send_msg(CS = #{ send_msg := Send, state := S }, Data) ->
     end.
 
 do_step_handshake(HState, Data) ->
-    case {enoise_hs_state:next_message(HState), Data} of
+    case {herrie_hs_state:next_message(HState), Data} of
         {in, {rcvd, Encrypted}} ->
-            case enoise_hs_state:read_message(HState, Encrypted) of
+            case herrie_hs_state:read_message(HState, Encrypted) of
                 {ok, HState1, Msg} ->
                     {ok, rcvd, Msg, HState1};
                 Err = {error, _} ->
                     Err
             end;
         {out, {send, Payload}} ->
-            {ok, HState1, Msg} = enoise_hs_state:write_message(HState, Payload),
+            {ok, HState1, Msg} = herrie_hs_state:write_message(HState, Payload),
             {ok, send, Msg, HState1};
         {done, done} ->
-            {ok, Res} = enoise_hs_state:finalize(HState),
+            {ok, Res} = herrie_hs_state:finalize(HState),
             {ok, done, Res};
         {Next, _} ->
             {error, {invalid_step, expected, Next, got, Data}}
@@ -254,8 +254,8 @@ do_tcp_handshake(Options, Role, TcpSock, Active) ->
                   state    => {TcpSock, Active, <<>>} },
     case handshake(Options, Role, ComState) of
         {ok, #{ rx := Rx, tx := Tx, final_state := FState }, #{ state := {_, _, Buf} }} ->
-            case enoise_connection:start_link(TcpSock, Rx, Tx, self(), {Active, Buf}) of
-                {ok, Pid} -> {ok, #enoise{ pid = Pid }, FState};
+            case herrie_connection:start_link(TcpSock, Rx, Tx, self(), {Active, Buf}) of
+                {ok, Pid} -> {ok, #herrie{ pid = Pid }, FState};
                 Err = {error, _} -> Err
             end;
         Err = {error, _} ->
@@ -269,16 +269,16 @@ create_hstate(Options, Role) ->
     NoiseProtocol =
         case NoiseProtocol0 of
             X when is_binary(X); is_list(X) ->
-                enoise_protocol:from_name(X);
+                herrie_protocol:from_name(X);
             _ -> NoiseProtocol0
         end,
-    DH = enoise_protocol:dh(NoiseProtocol),
+    DH = herrie_protocol:dh(NoiseProtocol),
     S  = proplists:get_value(s, Options, undefined),
     E  = proplists:get_value(e, Options, undefined),
     RS = remote_keypair(DH, proplists:get_value(rs, Options, undefined)),
     RE = remote_keypair(DH, proplists:get_value(re, Options, undefined)),
 
-    enoise_hs_state:init(NoiseProtocol, Role,
+    herrie_hs_state:init(NoiseProtocol, Role,
                          Prologue, {S, E, RS, RE}).
 
 
@@ -325,4 +325,4 @@ gen_tcp_rcv_msg({TcpSock, Active, Buf}, Timeout) ->
     end.
 
 remote_keypair(_DH, undefined) -> undefined;
-remote_keypair(DH, RemotePub) when is_binary(RemotePub) -> enoise_keypair:new(DH, RemotePub).
+remote_keypair(DH, RemotePub) when is_binary(RemotePub) -> herrie_keypair:new(DH, RemotePub).
