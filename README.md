@@ -1,22 +1,28 @@
-enoise
+herrie
 =====
 
-An Erlang implementation of the [Noise protocol](https://noiseprotocol.org/)
+Herrie — [Noise Protocol](https://noiseprotocol.org/) Framework for Erlang/BEAM
 
-`enoise` provides a generic handshake mechanism, that can be used in a couple
+`herrie` provides a generic handshake mechanism, that can be used in a couple
 of different ways. There is also a plain `gen_tcp`-wrapper, where you can
 "upgrade" a TCP socket to a Noise socket and use it in much the same way as you
 would use `gen_tcp`.
 
+Herrie is derived from the original [enoise](https://github.com/aeternity/enoise)
+project, developed by the aeternity developers. The original implementation is
+Copyright (c) 2018, aeternity developers and is distributed under the ISC License.
+Herrie is independently maintained and includes subsequent modifications and
+improvements.
+
 Interactive handshake
 ---------------------
 
-When using `enoise` to do an interactive handshake, `enoise` will only take
+When using `herrie` to do an interactive handshake, `herrie` will only take
 care of message composition/decompositiona and encryption/decryption - i.e. the
 user has to do the actual sending and receiving.
 
 An example of the interactive handshake can be seen in the `noise_interactive`
-test in `test/enoise_tests.erl`.
+test in `test/herrie_tests.erl`.
 
 Generic handshake
 -----------------
@@ -28,7 +34,7 @@ successful handshake is two Cipher states that can be used to encrypt/decrypt a
 RX channel and a TX channel respectively.
 
 The provided `gen_tcp`-wrapper is implemented using the generic handshake, see
-`src/enoise.erl`.
+`src/herrie.erl`.
 
 Build
 -----

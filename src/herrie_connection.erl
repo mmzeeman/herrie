@@ -10,7 +10,7 @@
 %%% @end
 %%% ------------------------------------------------------------------
 
--module(enoise_connection).
+-module(herrie_connection).
 
 -export([ controlling_process/2
         , close/1
@@ -23,7 +23,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--record(enoise, { pid }).
+-record(herrie, { pid }).
 
 -record(state, {rx, tx, owner, owner_ref, tcp_sock, active, msgbuf = [], rawbuf = <<>>}).
 
@@ -97,9 +97,9 @@ handle_info({tcp, TS, Data}, S = #state{ tcp_sock = TS, owner = O }) ->
         S2 = handle_msgs(S1#state{ msgbuf = S1#state.msgbuf ++ Msgs }),
         set_active(S2),
         {noreply, S2}
-    catch error:{enoise_error, _} ->
+    catch error:{herrie_error, _} ->
         %% We are not likely to recover, but leave the decision to upstream
-        O ! {enoise_error, TS, decrypt_error},
+        O ! {herrie_error, TS, decrypt_error},
         {noreply, S}
     end;
 handle_info({tcp_closed, TS}, S = #state{ tcp_sock = TS, owner = O }) ->
@@ -151,12 +151,12 @@ handle_data(S = #state{ rawbuf = Buf, rx = Rx }, Data) ->
             {S#state{ rawbuf = B }, []}; %% Not a full Noise message - save it
         <<Len:16, Rest/binary>> ->
             <<Msg:Len/binary, Rest2/binary>> = Rest,
-            case enoise_cipher_state:decrypt_with_ad(Rx, <<>>, Msg) of
+            case herrie_cipher_state:decrypt_with_ad(Rx, <<>>, Msg) of
                 {ok, Rx1, Msg1} ->
                     {S1, Msgs} = handle_data(S#state{ rawbuf = Rest2, rx = Rx1 }, <<>>),
                     {S1, [Msg1 | Msgs]};
                 {error, _} ->
-                    error({enoise_error, decrypt_input_failed})
+                    error({herrie_error, decrypt_input_failed})
             end;
         EmptyOrSingleByte ->
             {S#state{ rawbuf = EmptyOrSingleByte }, []}
@@ -165,19 +165,19 @@ handle_data(S = #state{ rawbuf = Buf, rx = Rx }, Data) ->
 handle_msgs(S = #state{ msgbuf = [] }) ->
     S;
 handle_msgs(S = #state{ msgbuf = Msgs, active = true, owner = Owner }) ->
-    [ Owner ! {noise, #enoise{ pid = self() }, Msg} || Msg <- Msgs ],
+    [ Owner ! {noise, #herrie{ pid = self() }, Msg} || Msg <- Msgs ],
     S#state{ msgbuf = [] };
 handle_msgs(S = #state{ msgbuf = [Msg | Msgs], active = {once, Delivered}, owner = Owner }) ->
     case Delivered of
         true  ->
             S;
         false ->
-            Owner ! {noise, #enoise{ pid = self() }, Msg},
+            Owner ! {noise, #herrie{ pid = self() }, Msg},
             S#state{ msgbuf = Msgs, active = {once, true} }
     end.
 
 handle_send(S = #state{ tcp_sock = TcpSock, tx = Tx }, Data) ->
-    {ok, Tx1, Msg} = enoise_cipher_state:encrypt_with_ad(Tx, <<>>, Data),
+    {ok, Tx1, Msg} = herrie_cipher_state:encrypt_with_ad(Tx, <<>>, Data),
     case gen_tcp:send(TcpSock, <<(byte_size(Msg)):16, Msg/binary>>) of
         ok               -> {ok, S#state{ tx = Tx1 }};
         Err = {error, _} -> {Err, S}

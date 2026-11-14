@@ -6,7 +6,7 @@
 %%% @end
 %%% ------------------------------------------------------------------
 
--module(enoise_keypair).
+-module(herrie_keypair).
 
 -export([ key_type/1
         , new/1

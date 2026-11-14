@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0]
+### Added
+- herrie_encrypt_with_ad_iolist, which prevents extra copying of ciphertext and tags
+### Changed
+- Changed all module names from enoise_ to herrie_ to be able to release on hex with fixes.
+- Fixed AESGCM rekey
+
 ## [Unreleased]
 ### Added
 - Support for 448 DH function and Blake2s hash function.

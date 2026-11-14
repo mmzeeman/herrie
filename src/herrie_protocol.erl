@@ -6,7 +6,7 @@
 %%% @end
 %%% ------------------------------------------------------------------
 
--module(enoise_protocol).
+-module(herrie_protocol).
 
 -export([ cipher/1
         , dh/1
@@ -27,28 +27,28 @@
                        | kk | k1k | kk1 | k1k1 | kx | k1x | kx1 | k1x1
                        | in | i1n | ik | i1k | ik1 | i1k1 | ix | i1x | ix1 | i1x1.
 
--type noise_msg() :: {in | out, [enoise_hs_state:noise_token()]}.
+-type noise_msg() :: {in | out, [herrie_hs_state:noise_token()]}.
 
 -record(noise_protocol,
         { hs_pattern = nn           :: noise_pattern()
-        , dh         = dh25519      :: enoise_hs_state:noise_dh()
-        , cipher     = 'ChaChaPoly' :: enoise_cipher_state:noise_cipher()
-        , hash       = blake2b      :: enoise_sym_state:noise_hash()
+        , dh         = dh25519      :: herrie_hs_state:noise_dh()
+        , cipher     = 'ChaChaPoly' :: herrie_cipher_state:noise_cipher()
+        , hash       = blake2b      :: herrie_sym_state:noise_hash()
         }).
 
 -opaque protocol() :: #noise_protocol{}.
 
 -export_type([noise_msg/0, noise_pattern/0, protocol/0]).
 
--spec cipher(Protocol :: protocol()) -> enoise_cipher_state:noise_cipher().
+-spec cipher(Protocol :: protocol()) -> herrie_cipher_state:noise_cipher().
 cipher(#noise_protocol{ cipher = Cipher }) ->
     Cipher.
 
--spec dh(Protocol :: protocol()) -> enoise_hs_state:noise_dh().
+-spec dh(Protocol :: protocol()) -> herrie_hs_state:noise_dh().
 dh(#noise_protocol{ dh = Dh }) ->
     Dh.
 
--spec hash(Protocol :: protocol()) -> enoise_sym_state:noise_hash().
+-spec hash(Protocol :: protocol()) -> herrie_sym_state:noise_hash().
 hash(#noise_protocol{ hash = Hash }) ->
     Hash.
 
@@ -84,17 +84,17 @@ from_name(String) ->
             error({unsupported_protocol, String})
     end.
 
--spec msgs(Role :: enoise_hs_state:noise_role(), Protocol :: protocol()) -> [noise_msg()].
+-spec msgs(Role :: herrie_hs_state:noise_role(), Protocol :: protocol()) -> [noise_msg()].
 msgs(Role, #noise_protocol{ hs_pattern = Pattern }) ->
     {_Pre, Msgs} = protocol(Pattern),
     role_adapt(Role, Msgs).
 
--spec pre_msgs(Role :: enoise_hs_state:noise_role(), Protocol :: protocol()) -> [noise_msg()].
+-spec pre_msgs(Role :: herrie_hs_state:noise_role(), Protocol :: protocol()) -> [noise_msg()].
 pre_msgs(Role, #noise_protocol{ hs_pattern = Pattern }) ->
     {PreMsgs, _Msgs} = protocol(Pattern),
     role_adapt(Role, PreMsgs).
 
--spec role_adapt(Role :: enoise_hs_state:noise_role(), [noise_msg()]) -> [noise_msg()].
+-spec role_adapt(Role :: herrie_hs_state:noise_role(), [noise_msg()]) -> [noise_msg()].
 role_adapt(initiator, Msgs) ->
     Msgs;
 role_adapt(responder, Msgs) ->
