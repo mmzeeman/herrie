@@ -31,7 +31,7 @@
 %% and the public key from `Key2' with algorithm `Algo'.
 -spec dh(Algo :: herrie_hs_state:noise_dh(),
          Key1:: keypair(), Key2 :: keypair()) -> binary().
-dh(Type, Key1, Key2) when Type == dh25519; Type == dh448 ->
+dh(Type, Key1, Key2) when Type =:= dh25519; Type =:= dh448 ->
     dh_(ecdh_type(Type), herrie_keypair:pubkey(Key2), herrie_keypair:seckey(Key1));
 dh(Type, _Key1, _Key2) ->
     error({unsupported_diffie_hellman, Type}).
@@ -44,20 +44,19 @@ dh_(DHType, OtherPub, MyPriv) ->
 
 -spec hmac(Hash :: herrie_sym_state:noise_hash(),
            Key :: binary(), Data :: iodata()) -> binary().
-hmac(Hash, Key, Data) ->
-    BLen = blocklen(Hash),
-    Block1 = hmac_format_key(Hash, Key, 16#36, BLen),
-    Hash1 = hash(Hash, [Block1, Data]),
-    Block2 = hmac_format_key(Hash, Key, 16#5C, BLen),
-    hash(Hash, [Block2, Hash1]).
+hmac(Hash, Key, Data)
+  when Hash =:= sha512; Hash =:= sha256; Hash =:= blake2s; Hash =:= blake2b ->
+    crypto:mac(hmac, Hash, Key, Data);
+hmac(Hash, _Key, _Data) ->
+    error({hash_not_implemented_yet, Hash}).
 
 -spec hkdf(Hash :: herrie_sym_state:noise_hash(),
            Key :: binary(), Data :: iodata()) -> [binary()].
 hkdf(Hash, Key, Data) ->
     TempKey = hmac(Hash, Key, Data),
-    Output1 = hmac(Hash, TempKey, <<1:8>>),
-    Output2 = hmac(Hash, TempKey, <<Output1/binary, 2:8>>),
-    Output3 = hmac(Hash, TempKey, <<Output2/binary, 3:8>>),
+    Output1 = hmac(Hash, TempKey, [1]),
+    Output2 = hmac(Hash, TempKey, [Output1, 2]),
+    Output3 = hmac(Hash, TempKey, [Output2, 3]),
     [Output1, Output2, Output3].
 
 -spec rekey(Cipher :: herrie_cipher_state:noise_cipher(), Key :: binary()) -> binary().
@@ -95,27 +94,19 @@ cipher('ChaChaPoly') -> chacha20_poly1305;
 cipher('AESGCM')     -> aes_256_gcm.
 
 -spec hash(Hash :: herrie_sym_state:noise_hash(), Data :: iodata()) -> binary().
-hash(blake2s, Data) ->
-    crypto:hash(blake2s, Data);
-hash(blake2b, Data) ->
-    crypto:hash(blake2b, Data);
-hash(sha256, Data) ->
-    crypto:hash(sha256, Data);
-hash(sha512, Data) ->
-    crypto:hash(sha512, Data);
+hash(Hash, Data)
+  when Hash =:= sha512; Hash =:= sha256; Hash =:= blake2s; Hash =:= blake2b ->
+    crypto:hash(Hash, Data);
 hash(Hash, _Data) ->
     error({hash_not_implemented_yet, Hash}).
 
 -spec pad(Data :: binary(), MinSize :: non_neg_integer(),
-          PadByte :: integer()) -> binary().
-pad(Data, MinSize, PadByte) ->
-    case byte_size(Data) of
-        N when N >= MinSize ->
-            Data;
-        N ->
-            PadData = << <<PadByte:8>> || _ <- lists:seq(1, MinSize - N) >>,
-            <<Data/binary, PadData/binary>>
-    end.
+          PadByte :: byte()) -> binary().
+pad(Data, MinSize, _PadByte) when byte_size(Data) >= MinSize ->
+    Data;
+pad(Data, MinSize, PadByte) when PadByte >= 0, PadByte =< 255 ->
+    Padding = binary:copy(<<PadByte:8>>, MinSize - byte_size(Data)),
+    <<Data/binary, Padding/binary>>.
 
 -spec hashlen(Hash :: herrie_sym_state:noise_hash()) -> non_neg_integer().
 hashlen(sha256)  -> 32;
@@ -123,26 +114,7 @@ hashlen(sha512)  -> 64;
 hashlen(blake2s) -> 32;
 hashlen(blake2b) -> 64.
 
--spec blocklen(Hash :: herrie_sym_state:noise_hash()) -> non_neg_integer().
-blocklen(sha256)  -> 64;
-blocklen(sha512)  -> 128;
-blocklen(blake2s) -> 64;
-blocklen(blake2b) -> 128.
-
 -spec dhlen(DH :: herrie_hs_state:noise_dh()) -> non_neg_integer().
 dhlen(dh25519) -> 32;
 dhlen(dh448)   -> 56.
-
-%%% Local implementations
-
-
-hmac_format_key(Hash, Key0, Pad, BLen) ->
-    Key1 =
-        case byte_size(Key0) =< BLen of
-            true  -> Key0;
-            false -> hash(Hash, Key0)
-        end,
-    Key2 = pad(Key1, BLen, 0),
-    <<PadWord:32>> = <<Pad:8, Pad:8, Pad:8, Pad:8>>,
-    << <<(Word bxor PadWord):32>> || <<Word:32>> <= Key2 >>.
 

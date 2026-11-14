@@ -104,7 +104,8 @@ blake2b_hmac_test() ->
 
 blake2b_hkdf_test() ->
     Test = fun(#{ key := Key, data := Data, out1 := Out1, out2 := Out2 }) ->
-               ?assertMatch([Out1, Out2, _], herrie_crypto:hkdf(blake2b, Key, Data))
+               ?assertMatch([Out1, Out2, _], herrie_crypto:hkdf(blake2b, Key, Data)),
+               ?assertMatch([Out1, Out2, _], herrie_crypto:hkdf(blake2b, Key, binary_to_list(Data)))
            end,
     lists:foreach(Test, test_utils:blake2b_hkdf_data()).
 
