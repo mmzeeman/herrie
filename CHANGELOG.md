@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redacted sensitive data in connection process to prevent leaking of secrets.
 - Clear finilized handshake secrets from record to prevent leaking of secrets.
 - herrie_crypto:hmac/3 now uses crypto:mac/4 for all supported hashes, including blake2.
+- The secret key in #hs record from herrie_keypair is now wrapped in a closure in order to 
+  prevent accidental leaks.
 
 ## [1.0.0]
 ### Added
