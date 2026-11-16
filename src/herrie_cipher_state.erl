@@ -24,23 +24,23 @@
 
 -type noise_cipher() :: 'ChaChaPoly' | 'AESGCM'.
 -type nonce()        :: non_neg_integer().
--type key()          :: empty | binary().
+-type key()          :: fun(() -> binary()).
 
--record(noise_cs, { k = empty             :: key()
+-record(noise_cs, { k = empty             :: empty | key()
                   , n = 0                 :: nonce()
                   , cipher = 'ChaChaPoly' :: noise_cipher() }).
 
 -opaque state() :: #noise_cs{}.
 
--export_type([noise_cipher/0, state/0]).
+-export_type([noise_cipher/0, state/0, key/0]).
 
--spec init(Key :: key(), Cipher :: noise_cipher()) -> state().
+-spec init(Key :: empty | binary() | key(), Cipher :: noise_cipher()) -> state().
 init(Key, Cipher) ->
-    #noise_cs{ k = Key, n = 0, cipher = Cipher }.
+    #noise_cs{ k = wrap(Key), n = 0, cipher = Cipher }.
 
--spec set_key(CState :: state(), NewKey :: key()) -> state().
+-spec set_key(CState :: state(), NewKey :: empty | binary() | key()) -> state().
 set_key(CState, NewKey) ->
-    CState#noise_cs{ k = NewKey, n = 0 }.
+    CState#noise_cs{ k = wrap(NewKey), n = 0 }.
 
 -spec has_key(CState :: state()) -> boolean().
 has_key(#noise_cs{ k = Key }) ->
@@ -55,7 +55,7 @@ set_nonce(CState = #noise_cs{}, Nonce) ->
 encrypt_with_ad(CState = #noise_cs{ k = empty }, _AD, PlainText) ->
     {ok, CState, PlainText};
 encrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, PlainText) ->
-    CipherText = herrie_crypto:encrypt(Cipher, K, N, AD, PlainText),
+    CipherText = herrie_crypto:encrypt(Cipher, K(), N, AD, PlainText),
     {ok, CState#noise_cs{ n = N+1 }, CipherText}.
 
 -spec encrypt_with_ad_iolist(CState :: state(), AD :: binary(), PlainText :: iodata()) ->
@@ -63,7 +63,7 @@ encrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, PlainTe
 encrypt_with_ad_iolist(CState = #noise_cs{ k = empty }, _AD, PlainText) ->
     {ok, CState, PlainText};
 encrypt_with_ad_iolist(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, PlainText) ->
-    CipherText = herrie_crypto:encrypt_iolist(Cipher, K, N, AD, PlainText),
+    CipherText = herrie_crypto:encrypt_iolist(Cipher, K(), N, AD, PlainText),
     {ok, CState#noise_cs{ n = N+1 }, CipherText}.
 
 
@@ -72,7 +72,7 @@ encrypt_with_ad_iolist(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, 
 decrypt_with_ad(CState = #noise_cs{ k = empty }, _AD, CipherText) ->
     {ok, CState, CipherText};
 decrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, CipherText) ->
-    case herrie_crypto:decrypt(Cipher, K, N, AD, CipherText) of
+    case herrie_crypto:decrypt(Cipher, K(), N, AD, CipherText) of
         PlainText when is_binary(PlainText) ->
             {ok, CState#noise_cs{ n = N+1 }, PlainText};
         Err = {error, _} ->
@@ -83,12 +83,28 @@ decrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, CipherT
 rekey(CState = #noise_cs{ k = empty }) ->
     CState;
 rekey(CState = #noise_cs{ k = K, cipher = Cipher }) ->
-    CState#noise_cs{ k = herrie_crypto:rekey(Cipher, K) }.
+    CState#noise_cs{ k = wrap(herrie_crypto:rekey(Cipher, K())) }.
 
 -spec cipher(CState :: state()) -> noise_cipher().
 cipher(#noise_cs{ cipher = Cipher }) ->
     Cipher.
 
--spec key(CState :: state()) -> key().
+%% [TODO] remove, is this for testing only?
+-spec key(CState :: state()) -> empty | binary().
+key(#noise_cs{ k = empty }) ->
+    empty;
 key(#noise_cs{ k = K }) ->
-    K.
+    K().
+
+-spec wrap(empty | binary() | key()) -> empty | key().
+wrap(empty) -> empty;
+wrap(F) when is_function(F, 0) -> F;
+wrap(K) when is_binary(K) ->
+    require_sensitive(),
+    fun() -> K end.
+
+require_sensitive() ->
+    case process_flag(sensitive, true) of
+        true -> ok;
+        false -> erlang:error(not_in_sensitive_process)
+    end.
