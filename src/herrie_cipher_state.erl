@@ -14,13 +14,17 @@
         , encrypt_with_ad_iolist/3
         , has_key/1
         , init/2
-        , key/1
         , rekey/1
         , set_key/2
         , set_nonce/2
         ]).
 
+-ifdef(TEST).
+-export([ key/1 ]).
+-endif.
+
 -include("herrie.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -type noise_cipher() :: 'ChaChaPoly' | 'AESGCM'.
 -type nonce()        :: non_neg_integer().
@@ -36,11 +40,11 @@
 
 -spec init(Key :: empty | binary() | key(), Cipher :: noise_cipher()) -> state().
 init(Key, Cipher) ->
-    #noise_cs{ k = wrap(Key), n = 0, cipher = Cipher }.
+    #noise_cs{ k = herrie_crypto:wrap(Key), n = 0, cipher = Cipher }.
 
 -spec set_key(CState :: state(), NewKey :: empty | binary() | key()) -> state().
 set_key(CState, NewKey) ->
-    CState#noise_cs{ k = wrap(NewKey), n = 0 }.
+    CState#noise_cs{ k = herrie_crypto:wrap(NewKey), n = 0 }.
 
 -spec has_key(CState :: state()) -> boolean().
 has_key(#noise_cs{ k = Key }) ->
@@ -83,28 +87,18 @@ decrypt_with_ad(CState = #noise_cs{ k = K, n = N, cipher = Cipher }, AD, CipherT
 rekey(CState = #noise_cs{ k = empty }) ->
     CState;
 rekey(CState = #noise_cs{ k = K, cipher = Cipher }) ->
-    CState#noise_cs{ k = wrap(herrie_crypto:rekey(Cipher, K())) }.
+    CState#noise_cs{ k = herrie_crypto:wrap(herrie_crypto:rekey(Cipher, K())) }.
 
 -spec cipher(CState :: state()) -> noise_cipher().
 cipher(#noise_cs{ cipher = Cipher }) ->
     Cipher.
 
-%% [TODO] remove, is this for testing only?
+-ifdef(TEST).
+
 -spec key(CState :: state()) -> empty | binary().
 key(#noise_cs{ k = empty }) ->
     empty;
 key(#noise_cs{ k = K }) ->
     K().
 
--spec wrap(empty | binary() | key()) -> empty | key().
-wrap(empty) -> empty;
-wrap(F) when is_function(F, 0) -> F;
-wrap(K) when is_binary(K) ->
-    require_sensitive(),
-    fun() -> K end.
-
-require_sensitive() ->
-    case process_flag(sensitive, true) of
-        true -> ok;
-        false -> erlang:error(not_in_sensitive_process)
-    end.
+-endif.

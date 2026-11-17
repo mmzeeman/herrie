@@ -9,7 +9,6 @@
 -module(herrie_sym_state).
 
 -export([ cipher_state/1
-        , ck/1
         , decrypt_and_hash/2
         , encrypt_and_hash/2
         , h/1
@@ -21,14 +20,18 @@
         , split/1
         ]).
 
+-ifdef(TEST).
+-export([ ck/1 ]).
+-endif.
+
 -include("herrie.hrl").
 
 -type noise_hash() :: sha256 | sha512 | blake2s | blake2b.
 
--record(noise_ss, { cs             :: herrie_cipher_state:state()
-                  , ck = <<>>      :: binary()
-                  , h  = <<>>      :: binary()
-                  , hash = blake2b :: noise_hash() }).
+-record(noise_ss, { cs                            :: herrie_cipher_state:state()
+                  , ck = herrie_crypto:wrap(<<>>) :: herrie_crypto:key()
+                  , h  = <<>>                     :: binary()
+                  , hash = blake2b                :: noise_hash() }).
 
 -opaque state() :: #noise_ss{}.
 -export_type([noise_hash/0, state/0]).
@@ -45,16 +48,16 @@ init(Protocol) ->
             false -> herrie_crypto:pad(Name, HashLen, 16#00)
         end,
     #noise_ss{ h = H1
-             , ck = H1
+             , ck = herrie_crypto:wrap(H1)
              , hash = Hash
              , cs = herrie_cipher_state:init(empty, Cipher) }.
 
 -spec mix_key(SState :: state(), InputKeyMaterial :: binary()) -> state().
 mix_key(SState = #noise_ss{ hash = Hash, ck = CK0, cs = CS0 }, InputKeyMaterial) ->
     [CK1, <<TempK:32/binary, _/binary>> | _] =
-        herrie_crypto:hkdf(Hash, CK0, InputKeyMaterial),
+        herrie_crypto:hkdf(Hash, CK0(), InputKeyMaterial),
     CS1 = herrie_cipher_state:set_key(CS0, TempK),
-    SState#noise_ss{ ck = CK1, cs = CS1 }.
+    SState#noise_ss{ ck = herrie_crypto:wrap(CK1), cs = CS1 }.
 
 -spec mix_hash(SState :: state(), Data :: binary()) -> state().
 mix_hash(SState = #noise_ss{ hash = Hash, h = H0 }, Data) ->
@@ -64,9 +67,9 @@ mix_hash(SState = #noise_ss{ hash = Hash, h = H0 }, Data) ->
 -spec mix_key_and_hash(SState :: state(), InputKeyMaterial :: binary()) -> state().
 mix_key_and_hash(SState = #noise_ss{ hash = Hash, ck = CK0, cs = CS0 }, InputKeyMaterial) ->
     [CK1, TempH, <<TempK:32/binary, _/binary>>] =
-        herrie_crypto:hkdf(Hash, CK0, InputKeyMaterial),
+        herrie_crypto:hkdf(Hash, CK0(), InputKeyMaterial),
     CS1 = herrie_cipher_state:set_key(CS0, TempK),
-    mix_hash(SState#noise_ss{ ck = CK1, cs = CS1 }, TempH).
+    mix_hash(SState#noise_ss{ ck = herrie_crypto:wrap(CK1), cs = CS1 }, TempH).
 
 -spec encrypt_and_hash(SState :: state(), PlainText :: binary()) -> {ok, state(), binary()}.
 encrypt_and_hash(SState = #noise_ss{ cs = CS0, h = H }, PlainText) ->
@@ -86,7 +89,7 @@ decrypt_and_hash(SState = #noise_ss{ cs = CS0, h = H }, CipherText) ->
 -spec split(SState :: state()) -> {herrie_cipher_state:state(), herrie_cipher_state:state()}.
 split(#noise_ss{ hash = Hash, ck = CK, cs = CS }) ->
     [<<TempK1:32/binary, _/binary>>, <<TempK2:32/binary, _/binary>>, _] =
-         herrie_crypto:hkdf(Hash, CK, <<>>),
+         herrie_crypto:hkdf(Hash, CK(), <<>>),
     {herrie_cipher_state:set_key(CS, TempK1),
      herrie_cipher_state:set_key(CS, TempK2)}.
 
@@ -94,9 +97,6 @@ split(#noise_ss{ hash = Hash, ck = CK, cs = CS }) ->
 cipher_state(#noise_ss{ cs = CS }) ->
     CS.
 
--spec ck(SState :: state()) -> binary().
-ck(#noise_ss{ ck = CK }) ->
-    CK.
 
 -spec h(SState :: state()) -> binary().
 h(#noise_ss{ h = H }) ->
@@ -105,3 +105,11 @@ h(#noise_ss{ h = H }) ->
 -spec hash(SState :: state()) -> noise_hash().
 hash(#noise_ss{ hash = Hash }) ->
     Hash.
+
+-ifdef(TEST).
+
+-spec ck(SState :: state()) -> binary().
+ck(#noise_ss{ ck = CK }) ->
+    CK().
+
+-endif.

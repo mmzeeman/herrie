@@ -9,8 +9,10 @@
 -module(herrie_crypto).
 
 -include("herrie.hrl").
+-include_lib("kernel/include/logger.hrl").
 
--export([ decrypt/5
+-export([ wrap/1
+        , decrypt/5
         , dh/3
         , dhlen/1
         , encrypt/5
@@ -25,12 +27,35 @@
 
 -define(MAC_LEN, 16).
 
--type keypair() :: herrie_keypair:keypair().
+-type key() :: fun( () -> binary() ).
+-export_type([key/0]).
+
+-spec wrap(undefined | empty | binary() | key()) -> undefined | empty | key().
+wrap(K) when is_binary(K) ->
+    require_sensitive(),
+    fun() -> K end;
+wrap(F) when is_function(F, 0) -> F;
+wrap(empty) -> empty;
+wrap(undefined) -> undefined.
+
+require_sensitive() ->
+    case process_flag(sensitive, true) of
+        true -> ok;
+        false ->
+            % We set the sensitive flag of a process to true, but it was false before, so set
+            % it back to false
+            process_flag(sensitive, false),
+            ?LOG_WARNING(
+               #{ text => "Process handling keys is not marked sensitive" }
+              ),
+            ok
+    end.
+
 
 %% @doc Perform a Diffie-Hellman calculation with the secret key from `Key1'
 %% and the public key from `Key2' with algorithm `Algo'.
 -spec dh(Algo :: herrie_hs_state:noise_dh(),
-         Key1:: keypair(), Key2 :: keypair()) -> binary().
+         Key1:: herrie_keypair:keypair(), Key2 :: herrie_keypair:keypair()) -> binary().
 dh(Type, Key1, Key2) when Type =:= dh25519; Type =:= dh448 ->
     dh_(ecdh_type(Type), herrie_keypair:pubkey(Key2), herrie_keypair:seckey(Key1));
 dh(Type, _Key1, _Key2) ->
