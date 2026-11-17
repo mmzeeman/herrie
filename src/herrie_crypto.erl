@@ -26,11 +26,25 @@
         ]).
 
 -define(MAC_LEN, 16).
+-type key() :: binary().
+-type key_fun() :: fun( () -> key() ).
+-export_type([key/0, key_fun/0]).
 
--type key() :: fun( () -> binary() ).
--export_type([key/0]).
-
--spec wrap(undefined | empty | binary() | key()) -> undefined | empty | key().
+%% @doc Normalize a key into its wrapped representation.
+%%
+%% Binary keys are wrapped in a zero-arity function to reduce the risk of
+%% accidental disclosure of key material through logs, crash reports,
+%% tracing, debugging output, or casual inspection of process state.
+%%
+%% Wrapping does not provide security or confidentiality guarantees. The key
+%% remains accessible to code that holds the wrapped value and can invoke
+%% the function. To minimize accidental exposure, raw key binaries should
+%% be handled for as short a time as possible and preferably in processes
+%% with `process_flag(sensitive, true)` set.
+%%
+%% Already wrapped keys are returned unchanged. The atoms `empty` and
+%% `undefined` are preserved.%
+-spec wrap(undefined | empty | key() | key_fun()) -> undefined | empty | key_fun().
 wrap(K) when is_binary(K) ->
     fun() -> K end;
 wrap(F) when is_function(F, 0) -> F;

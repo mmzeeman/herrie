@@ -19,7 +19,7 @@
 -type key_type() :: dh25519 | dh448.
 
 -record(kp, { type :: key_type()
-            , sec  :: undefined | herrie_crypto:key()
+            , sec  :: undefined | herrie_crypto:key_fun()
             , pub  :: binary() }).
 
 %% Abstract keypair holding a secret key/public key pair and its type.

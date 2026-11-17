@@ -29,7 +29,7 @@
 -type noise_hash() :: sha256 | sha512 | blake2s | blake2b.
 
 -record(noise_ss, { cs                            :: herrie_cipher_state:state()
-                  , ck = herrie_crypto:wrap(<<>>) :: herrie_crypto:key()
+                  , ck = herrie_crypto:wrap(<<>>) :: herrie_crypto:key_fun()
                   , h  = <<>>                     :: binary()
                   , hash = blake2b                :: noise_hash() }).
 

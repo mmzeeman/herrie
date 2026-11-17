@@ -28,21 +28,20 @@
 
 -type noise_cipher() :: 'ChaChaPoly' | 'AESGCM'.
 -type nonce()        :: non_neg_integer().
--type key()          :: fun(() -> binary()).
 
--record(noise_cs, { k = empty             :: empty | key()
+-record(noise_cs, { k = empty             :: empty | herrie_crypto:key_fun()
                   , n = 0                 :: nonce()
                   , cipher = 'ChaChaPoly' :: noise_cipher() }).
 
 -opaque state() :: #noise_cs{}.
 
--export_type([noise_cipher/0, state/0, key/0]).
+-export_type([noise_cipher/0, state/0]).
 
--spec init(Key :: empty | binary() | key(), Cipher :: noise_cipher()) -> state().
+-spec init(Key :: empty | herrie_crypto:key() | herrie_crypto:key_fun(), Cipher :: noise_cipher()) -> state().
 init(Key, Cipher) ->
     #noise_cs{ k = herrie_crypto:wrap(Key), n = 0, cipher = Cipher }.
 
--spec set_key(CState :: state(), NewKey :: empty | binary() | key()) -> state().
+-spec set_key(CState :: state(), NewKey :: empty | herrie_crypto:key() | herrie_crypto:key_fun()) -> state().
 set_key(CState, NewKey) ->
     CState#noise_cs{ k = herrie_crypto:wrap(NewKey), n = 0 }.
 
