@@ -32,25 +32,10 @@
 
 -spec wrap(undefined | empty | binary() | key()) -> undefined | empty | key().
 wrap(K) when is_binary(K) ->
-    require_sensitive(),
     fun() -> K end;
 wrap(F) when is_function(F, 0) -> F;
 wrap(empty) -> empty;
 wrap(undefined) -> undefined.
-
-require_sensitive() ->
-    case process_flag(sensitive, true) of
-        true -> ok;
-        false ->
-            % We set the sensitive flag of a process to true, but it was false before, so set
-            % it back to false
-            process_flag(sensitive, false),
-            ?LOG_WARNING(
-               #{ text => "Process handling keys is not marked sensitive" }
-              ),
-            ok
-    end.
-
 
 %% @doc Perform a Diffie-Hellman calculation with the secret key from `Key1'
 %% and the public key from `Key2' with algorithm `Algo'.
