@@ -43,7 +43,7 @@
 %% with `process_flag(sensitive, true)` set.
 %%
 %% Already wrapped keys are returned unchanged. The atoms `empty` and
-%% `undefined` are preserved.%
+%% `undefined` are preserved.
 -spec wrap(undefined | empty | key() | key_fun()) -> undefined | empty | key_fun().
 wrap(K) when is_binary(K) ->
     fun() -> K end;
