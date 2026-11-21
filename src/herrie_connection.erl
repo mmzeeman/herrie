@@ -12,6 +12,7 @@
 %%% ------------------------------------------------------------------
 
 -module(herrie_connection).
+-behaviour(gen_server).
 
 -export([ controlling_process/2
         , close/1
@@ -125,11 +126,12 @@ terminate(_Reason, #state{ tcp_sock = TcpSock, owner_ref = ORef }) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-format_status(#state{}=State) ->
-    State#state{ rx = redacted,
-                 tx = redacted,
-                 rawbuf = redacted,
-                 msgbuf = redacted }.
+-spec format_status(gen_server:format_status()) -> gen_server:format_status().
+format_status(#{state := #state{}=State} = Status) ->
+    Status#{ state => State#state{ rx = redacted,
+                                   tx = redacted,
+                                   rawbuf = redacted,
+                                   msgbuf = redacted }}.
 
 
 %% -- Local functions --------------------------------------------------------
