@@ -1,5 +1,6 @@
 %%% ------------------------------------------------------------------
 %%% @copyright 2018, Aeternity Anstalt
+%%% @copyright 2026, herrie developers
 %%%
 %%% @doc Module implementing a gen_server for holding a handshaked
 %%% Noise connection over gen_tcp.
@@ -11,6 +12,7 @@
 %%% ------------------------------------------------------------------
 
 -module(herrie_connection).
+-behaviour(gen_server).
 
 -export([ controlling_process/2
         , close/1
@@ -21,7 +23,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3, format_status/2]).
+         terminate/2, code_change/3, format_status/1]).
 
 -record(herrie, { pid }).
 
@@ -71,6 +73,7 @@ controlling_process(Noise, NewPid) ->
 
 %% -- gen_server callbacks ---------------------------------------------------
 init([#state{owner = Owner} = State]) ->
+    _ = process_flag(sensitive, true),
     OwnerRef = erlang:monitor(process, Owner),
     {ok, State#state{owner_ref = OwnerRef}}.
 
@@ -123,10 +126,12 @@ terminate(_Reason, #state{ tcp_sock = TcpSock, owner_ref = ORef }) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-format_status(_Opt, [_PDict, State = #state{}]) ->
-    FormattedState = State#state{ rx = redacted, tx = redacted,
-                                  msgbuf = redacted },
-    [{data, [{"State", FormattedState}]}].
+-spec format_status(gen_server:format_status()) -> gen_server:format_status().
+format_status(#{state := #state{}=State} = Status) ->
+    Status#{ state => State#state{ rx = redacted,
+                                   tx = redacted,
+                                   rawbuf = redacted,
+                                   msgbuf = redacted }}.
 
 
 %% -- Local functions --------------------------------------------------------

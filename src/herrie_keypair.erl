@@ -1,5 +1,6 @@
 %%% ------------------------------------------------------------------
 %%% @copyright 2018, Aeternity Anstalt
+%%% @copyright 2026, herrie developers
 %%%
 %%% @doc Module is an abstract data type for a key pair.
 %%%
@@ -19,7 +20,7 @@
 -type key_type() :: dh25519 | dh448.
 
 -record(kp, { type :: key_type()
-            , sec  :: fun(() -> binary()) | undefined
+            , sec  :: undefined | herrie_crypto:key_fun()
             , pub  :: binary() }).
 
 %% Abstract keypair holding a secret key/public key pair and its type.
@@ -42,7 +43,7 @@ new(Type) ->
 new(Type, Secret, undefined) ->
     new(Type, Secret, pubkey_from_secret(Type, Secret));
 new(Type, Secret, Public) ->
-    #kp{ type = Type, sec = fun() -> Secret end, pub = Public }.
+    #kp{ type = Type, sec = herrie_crypto:wrap(Secret), pub = Public }.
 
 %% @doc Define a "public only" keypair - holding just a public key and
 %% `undefined' for secret key.

@@ -7,12 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0]
 ### Added
 - herrie_crypto:hash/2 and herrie_crypto:hmac/3 now take iodata() as input and prevent copying of data.
+- herrie_crypto:wrap/1 to normalize/wrap raw keys into zero-arity functions.
 ### Changed
 - Redacted sensitive data in connection process to prevent leaking of secrets.
 - Clear finilized handshake secrets from record to prevent leaking of secrets.
 - herrie_crypto:hmac/3 now uses crypto:mac/4 for all supported hashes, including blake2.
-- The secret key in #hs record from herrie_keypair is now wrapped in a closure in order to 
-  prevent accidental leaks.
+- The secret key in #kp record from herrie_keypair is now retrieved by calling a zero-arity function.
+- The ck (chain) key in #noise_ss record from herrie_sym_state is now retrieved by calling a zero-arity function.
+- The cipher key in #noise_cs record from herrie_cipher_state is now retrieved by calling a zero-arity function.
+- herrie_cipher_state:key/1 and herrie_sym_state:ck/1 are no longer exported in production builds (test-only).
 
 ## [1.0.0]
 ### Added

@@ -1,5 +1,6 @@
 %%% ------------------------------------------------------------------
 %%% @copyright 2018, Aeternity Anstalt
+%%% @copyright 2026, herrie developers
 %%%
 %%% @doc Module implementing crypto primitives needed by Noise protocol
 %%%
@@ -10,7 +11,8 @@
 
 -include("herrie.hrl").
 
--export([ decrypt/5
+-export([ wrap/1
+        , decrypt/5
         , dh/3
         , dhlen/1
         , encrypt/5
@@ -24,13 +26,35 @@
         ]).
 
 -define(MAC_LEN, 16).
+-type key() :: binary().
+-type key_fun() :: fun( () -> key() ).
+-export_type([key/0, key_fun/0]).
 
--type keypair() :: herrie_keypair:keypair().
+%% @doc Normalize a key into its wrapped representation.
+%%
+%% Binary keys are wrapped in a zero-arity function to reduce the risk of
+%% accidental disclosure of key material through logs, crash reports,
+%% tracing, debugging output, or casual inspection of process state.
+%%
+%% Wrapping does not provide security or confidentiality guarantees. The key
+%% remains accessible to code that holds the wrapped value and can invoke
+%% the function. To minimize accidental exposure, raw key binaries should
+%% be handled for as short a time as possible and preferably in processes
+%% with `process_flag(sensitive, true)` set.
+%%
+%% Already wrapped keys are returned unchanged. The atoms `empty` and
+%% `undefined` are preserved.
+-spec wrap(undefined | empty | key() | key_fun()) -> undefined | empty | key_fun().
+wrap(K) when is_binary(K) ->
+    fun() -> K end;
+wrap(F) when is_function(F, 0) -> F;
+wrap(empty) -> empty;
+wrap(undefined) -> undefined.
 
 %% @doc Perform a Diffie-Hellman calculation with the secret key from `Key1'
 %% and the public key from `Key2' with algorithm `Algo'.
 -spec dh(Algo :: herrie_hs_state:noise_dh(),
-         Key1:: keypair(), Key2 :: keypair()) -> binary().
+         Key1:: herrie_keypair:keypair(), Key2 :: herrie_keypair:keypair()) -> binary().
 dh(Type, Key1, Key2) when Type =:= dh25519; Type =:= dh448 ->
     dh_(ecdh_type(Type), herrie_keypair:pubkey(Key2), herrie_keypair:seckey(Key1));
 dh(Type, _Key1, _Key2) ->

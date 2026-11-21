@@ -1,5 +1,6 @@
 %%% ------------------------------------------------------------------
 %%% @copyright 2018, Aeternity Anstalt
+%%% @copyright 2026, herrie developers
 %%%
 %%% @doc Module encapsulating a Noise handshake state
 %%%
@@ -20,20 +21,19 @@
 -type noise_role()  :: initiator | responder.
 -type noise_dh()    :: dh25519 | dh448.
 -type noise_token() :: s | e | ee | ss | es | se.
--type keypair()     :: herrie_keypair:keypair().
 -type noise_split_state() :: #{ rx := herrie_cipher_state:state(),
                                 tx := herrie_cipher_state:state(),
                                 hs_hash := binary(),
                                 final_state => state() }.
 
--type optional_key() :: undefined | keypair().
--type initial_keys() :: {optional_key(), optional_key(), optional_key(), optional_key()}.
+-type optional_keypair() :: undefined | herrie_keypair:keypair().
+-type initial_keys() :: {optional_keypair(), optional_keypair(), optional_keypair(), optional_keypair()}.
 
 -record(noise_hs, { ss                :: herrie_sym_state:state() | undefined
-                  , s                 :: keypair() | undefined
-                  , e                 :: keypair() | undefined
-                  , rs                :: keypair() | undefined
-                  , re                :: keypair() | undefined
+                  , s                 :: optional_keypair()
+                  , e                 :: optional_keypair()
+                  , rs                :: optional_keypair()
+                  , re                :: optional_keypair()
                   , role = initiator  :: noise_role()
                   , dh = dh25519      :: noise_dh()
                   , msgs = []         :: [herrie_protocol:noise_msg()] }).
@@ -102,7 +102,7 @@ read_message(HS = #noise_hs{ msgs = [{in, Msg} | Msgs] }, Message) ->
         Err = {error, _} -> Err
     end.
 
--spec remote_keys(HS :: state()) -> undefined | keypair().
+-spec remote_keys(HS :: state()) -> optional_keypair().
 remote_keys(#noise_hs{ rs = RS }) ->
     RS.
 

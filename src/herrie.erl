@@ -1,5 +1,6 @@
 %%% ------------------------------------------------------------------
 %%% @copyright 2018, Aeternity Anstalt
+%%% @copyright 2026, herrie developers
 %%%
 %%% @doc Module is an interface to the Noise protocol
 %%% [https://noiseprotocol.org]
@@ -9,6 +10,13 @@
 %%% For convenience there is also an API to use Noise over TCP (i.e. `gen_tcp')
 %%% and after "upgrading" a `gen_tcp'-socket into a `herrie'-socket it has a
 %%% similar API as `gen_tcp'.
+%%%
+%%% == Security considerations ==
+%%%
+%%% Processes performing Noise handshakes or handling secret keys should set
+%%% `process_flag(sensitive, true)` to prevent raw key material and intermediate
+%%% handshake records from being leaked via crash reports, stack traces, tracing,
+%%% or `sys:get_status/1`.
 %%%
 %%% @end ------------------------------------------------------------------
 
