@@ -11,10 +11,9 @@ format_status_redacts_sensitive_state_test() ->
     State = {state, rx_secret, tx_secret, self(), OwnerRef, socket, true,
              [plaintext], <<>>},
 
-    [{data, [{"State", FormattedState}]}] =
-        herrie_connection:format_status(normal, [[], State]),
+    FormattedState = herrie_connection:format_status(State),
 
     ?assertEqual(
        {state, redacted, redacted, self(), OwnerRef, socket, true,
-        redacted, <<>>},
+        redacted, redacted},
        FormattedState).
