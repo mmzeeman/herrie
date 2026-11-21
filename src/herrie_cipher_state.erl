@@ -24,7 +24,6 @@
 -endif.
 
 -include("herrie.hrl").
--include_lib("kernel/include/logger.hrl").
 
 -type noise_cipher() :: 'ChaChaPoly' | 'AESGCM'.
 -type nonce()        :: non_neg_integer().

@@ -9,7 +9,6 @@
 -module(herrie_crypto).
 
 -include("herrie.hrl").
--include_lib("kernel/include/logger.hrl").
 
 -export([ wrap/1
         , decrypt/5
