@@ -71,6 +71,7 @@ controlling_process(Noise, NewPid) ->
 
 %% -- gen_server callbacks ---------------------------------------------------
 init([#state{owner = Owner} = State]) ->
+    _ = process_flag(sensitive, true),
     OwnerRef = erlang:monitor(process, Owner),
     {ok, State#state{owner_ref = OwnerRef}}.
 
