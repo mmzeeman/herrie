@@ -1,5 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% @copyright (C) 2018, Aeternity Anstalt
+%%% @copyright (C) 2026, herrie developers
 %%%-------------------------------------------------------------------
 
 -module(herrie_connection_tests).
