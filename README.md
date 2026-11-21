@@ -36,6 +36,17 @@ RX channel and a TX channel respectively.
 The provided `gen_tcp`-wrapper is implemented using the generic handshake, see
 `src/herrie.erl`.
 
+Security considerations
+-----------------------
+
+To minimize the risk of accidental exposure of raw key material in crash dumps,
+process inspection (`sys:get_status/1`), or tracing if a process fails mid-handshake,
+processes performing Noise handshakes or handling secret keys should set:
+
+```erlang
+process_flag(sensitive, true)
+```
+
 Build
 -----
 
